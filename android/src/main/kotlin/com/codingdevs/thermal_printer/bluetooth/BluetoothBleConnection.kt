@@ -1,6 +1,7 @@
 package com.codingdevs.thermal_printer.bluetooth
 
 import android.bluetooth.*
+import android.bluetooth.BluetoothManager
 import android.content.Context
 import android.os.Build
 import android.os.Bundle
@@ -50,7 +51,13 @@ class BluetoothBleConnection(
         if (mState == BluetoothConstants.STATE_CONNECTED) return
         state = BluetoothConstants.STATE_CONNECTING
 
-        BluetoothAdapter.getDefaultAdapter()?.let { adapter ->
+        val btAdapter = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            (mContext.getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager)?.adapter
+        } else {
+            @Suppress("DEPRECATION")
+            BluetoothAdapter.getDefaultAdapter()
+        }
+        btAdapter?.let { adapter ->
             try {
                 val device = adapter.getRemoteDevice(address)
                 val bluetoothGattCallback = ResponseBluetoothGattCallback(result)
@@ -112,12 +119,17 @@ class BluetoothBleConnection(
 //            }
 
             bluetoothGatt?.let { gatt ->
-                characteristic.writeType = BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE
-                characteristic.value = out
-                gatt.writeCharacteristic(mCharacteristic)
-                // Share the sent message back to the UI Activity
-                mHandler.obtainMessage(BluetoothConstants.MESSAGE_WRITE, -1, -1, out)
-                    .sendToTarget()
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    gatt.writeCharacteristic(characteristic, out!!, BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE)
+                } else {
+                    @Suppress("DEPRECATION")
+                    characteristic.writeType = BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE
+                    @Suppress("DEPRECATION")
+                    characteristic.value = out
+                    @Suppress("DEPRECATION")
+                    gatt.writeCharacteristic(mCharacteristic)
+                }
+                mHandler.obtainMessage(BluetoothConstants.MESSAGE_WRITE, -1, -1, out).sendToTarget()
             } ?: error("Not connected to a BLE device!")
         }
     }
@@ -279,6 +291,7 @@ class BluetoothBleConnection(
                 }
                 else -> {
                     // For all other profiles, writes the data formatted in HEX.
+                    @Suppress("DEPRECATION")
                     val data: ByteArray? = characteristic.value
                     if (data?.isNotEmpty() == true) {
 
@@ -338,8 +351,14 @@ class BluetoothBleConnection(
                     ?: return
             mCharacteristic = characteristic
 //            Log.w(TAG, " *************** BluetoothGatt descriptor ${characteristic.uuid}")
-            descriptor.value = BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE
-            gatt.writeDescriptor(descriptor)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                gatt.writeDescriptor(descriptor, BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE)
+            } else {
+                @Suppress("DEPRECATION")
+                descriptor.value = BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE
+                @Suppress("DEPRECATION")
+                gatt.writeDescriptor(descriptor)
+            }
 //            }
         } ?: run {
             Log.w(TAG, "BluetoothGatt not initialized")
@@ -363,8 +382,14 @@ class BluetoothBleConnection(
                         return
                     }
 
-                    cccDescriptor.value = BluetoothGattDescriptor.DISABLE_NOTIFICATION_VALUE
-                    gatt.writeDescriptor(cccDescriptor)
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        gatt.writeDescriptor(cccDescriptor, BluetoothGattDescriptor.DISABLE_NOTIFICATION_VALUE)
+                    } else {
+                        @Suppress("DEPRECATION")
+                        cccDescriptor.value = BluetoothGattDescriptor.DISABLE_NOTIFICATION_VALUE
+                        @Suppress("DEPRECATION")
+                        gatt.writeDescriptor(cccDescriptor)
+                    }
                 } ?: Log.e(
                 "ConnectionManager",
                 "${characteristic.uuid} doesn't contain the CCC descriptor!"

@@ -17,7 +17,10 @@ package com.codingdevs.thermal_printer.bluetooth
 
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
+import android.bluetooth.BluetoothManager
 import android.bluetooth.BluetoothSocket
+import android.content.Context
+import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.util.Log
@@ -33,11 +36,14 @@ import java.io.OutputStream
  * incoming connections, a thread for connecting with a device, and a
  * thread for performing data transmissions when connected.
  */
-class BluetoothConnection constructor(handler: Handler) : IBluetoothConnection {
+class BluetoothConnection constructor(handler: Handler, context: Context) : IBluetoothConnection {
 
-
-    // Member fields
-    private val mAdapter: BluetoothAdapter = BluetoothAdapter.getDefaultAdapter()
+    private val mAdapter: BluetoothAdapter? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        (context.getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager)?.adapter
+    } else {
+        @Suppress("DEPRECATION")
+        BluetoothAdapter.getDefaultAdapter()
+    }
     private val mHandler: Handler
     private var mConnectThread: ConnectThread? = null
     private var mConnectedThread: ConnectedThread? = null
@@ -79,7 +85,7 @@ class BluetoothConnection constructor(handler: Handler) : IBluetoothConnection {
     override fun connect(address: String, result: MethodChannel.Result) {
         if (!address.matches(Regex(BluetoothConstants.BLUETOOTH_REGEX))) return
         Log.d(TAG, "connect to: $address")
-        val device = mAdapter.getRemoteDevice(address)
+        val device = mAdapter?.getRemoteDevice(address) ?: return
 
         // Cancel any thread attempting to make a connection
         if (mState == BluetoothConstants.STATE_CONNECTING) {
@@ -231,7 +237,7 @@ class BluetoothConnection constructor(handler: Handler) : IBluetoothConnection {
             }
 
             // Always cancel discovery because it will slow down a connection
-            mAdapter.cancelDiscovery()
+            mAdapter?.cancelDiscovery()
 
             // Make a connection to the BluetoothSocket
             try {
