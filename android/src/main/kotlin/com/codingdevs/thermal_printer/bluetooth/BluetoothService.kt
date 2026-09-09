@@ -3,9 +3,11 @@ package com.codingdevs.thermal_printer.bluetooth
 import android.app.Activity
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
+import android.bluetooth.BluetoothManager
 import android.bluetooth.le.ScanCallback
 import android.bluetooth.le.ScanResult
 import android.content.Context
+import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
@@ -23,12 +25,19 @@ class BluetoothService(private var bluetoothHandler: Handler?) {
     private var reconnectBluetooth = false
     private var result: Result? = null
 
-    val mBluetoothAdapter: BluetoothAdapter by lazy {
-        BluetoothAdapter.getDefaultAdapter()
+    var context: Context? = null
+
+    val mBluetoothAdapter: BluetoothAdapter? by lazy {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            (context?.getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager)?.adapter
+        } else {
+            @Suppress("DEPRECATION")
+            BluetoothAdapter.getDefaultAdapter()
+        }
     }
 
     private val bleScanner by lazy {
-        mBluetoothAdapter.bluetoothLeScanner
+        mBluetoothAdapter?.bluetoothLeScanner
     }
     private var devicesBle: MutableList<LocalBluetoothDevice> = mutableListOf()
 
@@ -47,7 +56,7 @@ class BluetoothService(private var bluetoothHandler: Handler?) {
         val list = ArrayList<HashMap<*, *>>()
         bluetoothHandler?.obtainMessage(BluetoothConstants.MESSAGE_START_SCANNING, -1, -1)
             ?.sendToTarget()
-        val pairedDevices: Set<BluetoothDevice>? = mBluetoothAdapter.bondedDevices
+        val pairedDevices: Set<BluetoothDevice>? = mBluetoothAdapter?.bondedDevices
         pairedDevices?.forEach { device ->
             val deviceName =
                 if (device.name == null) device.address else device.name
@@ -215,8 +224,8 @@ class BluetoothService(private var bluetoothHandler: Handler?) {
     @Suppress("unused")
     private fun setUpBluetooth() {
 
-        if (!mBluetoothAdapter.isEnabled) {
-            mBluetoothAdapter.enable()
+        if (mBluetoothAdapter?.isEnabled == true) {
+            mBluetoothAdapter?.enable()
             while (true) {
                 if (mBluetoothAdapter.isEnabled) break
             }

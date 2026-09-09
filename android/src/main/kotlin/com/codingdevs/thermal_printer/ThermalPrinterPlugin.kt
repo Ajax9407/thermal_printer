@@ -169,12 +169,10 @@ class ThermalPrinterPlugin : FlutterPlugin, MethodCallHandler, PluginRegistry.Re
         channel.setMethodCallHandler(null)
         messageChannel?.setStreamHandler(null)
         messageUSBChannel?.setStreamHandler(null)
-
         messageChannel = null
         messageUSBChannel = null
-
-        bluetoothService.setHandler(null)
-        adapter.setHandler(null)
+        if (::bluetoothService.isInitialized) bluetoothService.setHandler(null)
+        if (::adapter.isInitialized) adapter.setHandler(null)
     }
 
     override fun onAttachedToEngine(@NonNull flutterPluginBinding: FlutterPlugin.FlutterPluginBinding) {
@@ -210,6 +208,7 @@ class ThermalPrinterPlugin : FlutterPlugin, MethodCallHandler, PluginRegistry.Re
         adapter.init(context)
 
         bluetoothService = BluetoothService.getInstance(bluetoothHandler)
+        bluetoothService.context = flutterPluginBinding.applicationContext
     }
 
     override fun onMethodCall(@NonNull call: MethodCall, @NonNull result: Result) {
@@ -313,7 +312,12 @@ class ThermalPrinterPlugin : FlutterPlugin, MethodCallHandler, PluginRegistry.Re
 
     private fun verifyIsBluetoothIsOn(): Boolean {
         if (checkPermissions()) {
-            if (!bluetoothService.mBluetoothAdapter.isEnabled) {
+            val adapter = bluetoothService.mBluetoothAdapter
+            if (adapter == null) {
+                Log.e(TAG, "BluetoothAdapter is null — device may not support Bluetooth")
+                return false
+            }
+            if (!adapter.isEnabled) {
                 if (requestPermissionBT) return false
                 val enableBtIntent = Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)
                 currentActivity?.let { startActivityForResult(it, enableBtIntent, PERMISSION_ENABLE_BLUETOOTH, null) }
