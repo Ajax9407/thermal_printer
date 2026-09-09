@@ -95,7 +95,7 @@ class ThermalPrinterPlugin : FlutterPlugin, MethodCallHandler, PluginRegistry.Re
                                 } catch (e: Exception) {
                                 }
                             eventSink?.success(2)
-                            bluetoothService.removeReconnectHandlers()
+                            if (::bluetoothService.isInitialized) bluetoothService.removeReconnectHandlers()
                         }
                         BluetoothConstants.STATE_CONNECTING -> {
                             Log.w(TAG, " -------------------------- connection BT STATE_CONNECTING ")
@@ -104,8 +104,7 @@ class ThermalPrinterPlugin : FlutterPlugin, MethodCallHandler, PluginRegistry.Re
                         BluetoothConstants.STATE_NONE -> {
                             Log.w(TAG, " -------------------------- connection BT STATE_NONE ")
                             eventSink?.success(0)
-                            bluetoothService.autoConnectBt()
-
+                            if (::bluetoothService.isInitialized) bluetoothService.autoConnectBt()
                         }
                         BluetoothConstants.STATE_FAILED -> {
                             Log.w(TAG, " -------------------------- connection BT STATE_FAILED ")
@@ -416,24 +415,24 @@ class ThermalPrinterPlugin : FlutterPlugin, MethodCallHandler, PluginRegistry.Re
         currentActivity = binding.activity
         binding.addRequestPermissionsResultListener(this)
         binding.addActivityResultListener(this)
-        bluetoothService.setActivity(currentActivity)
+        if (::bluetoothService.isInitialized) bluetoothService.setActivity(currentActivity)
     }
 
     override fun onDetachedFromActivityForConfigChanges() {
         currentActivity = null
-        bluetoothService.setActivity(null)
+        if (::bluetoothService.isInitialized) bluetoothService.setActivity(null)
     }
 
     override fun onReattachedToActivityForConfigChanges(binding: ActivityPluginBinding) {
         currentActivity = binding.activity
         binding.addRequestPermissionsResultListener(this)
         binding.addActivityResultListener(this)
-        bluetoothService.setActivity(currentActivity)
+        if (::bluetoothService.isInitialized) bluetoothService.setActivity(currentActivity)
     }
 
     override fun onDetachedFromActivity() {
         currentActivity = null
-        bluetoothService.setActivity(null)
+        if (::bluetoothService.isInitialized) bluetoothService.setActivity(null)
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?): Boolean {
